@@ -44,10 +44,14 @@ def normalize(point, width, height):
     x, y = point
     return round(x * width), round(y * height)
 
+def remap(value, in_min, in_max, out_min, out_max):
+    value = max(in_min, min(in_max, value))
+    return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
+
 
 
 was_touching = False
-prev_mouse_x, prev_mouse_y = screen_w, screen_h
+prev_mouse_x, prev_mouse_y = screen_w//2, screen_h//2
 SMOOTHING = 0.5
 CLICK_THRESHOLD = 35
 
@@ -81,15 +85,19 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                     hand = result.handedness[idx]
                     hand_label = hand[0].display_name
 
+                    SENSITIVITY_MARGIN = 0.15
+
+                    MIN_RANGE = SENSITIVITY_MARGIN
+                    MAX_RANGE = 1 - SENSITIVITY_MARGIN
+
                     if hand_label == 'Left':
                         index_tip = hand_landmarks[8]
-                        target_x = index_tip.x * screen_w
-                        target_y = index_tip.y * screen_h
 
+                        target_x = remap(index_tip.x, MIN_RANGE, MAX_RANGE, 0, screen_w)
+                        target_y = remap(index_tip.y, MIN_RANGE, MAX_RANGE, 0, screen_h)
 
                         smooth_x = prev_mouse_x + (target_x - prev_mouse_x) * SMOOTHING
                         smooth_y = prev_mouse_y + (target_y - prev_mouse_y) * SMOOTHING
-
                         pg.moveTo(x=round(smooth_x), y=round(smooth_y))
                         prev_mouse_x, prev_mouse_y = smooth_x, smooth_y
 
