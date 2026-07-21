@@ -3,7 +3,6 @@ import time
 import mediapipe as mp
 import pyautogui as pg
 import cv2
-from pynput.mouse import Controller
 from mediapipe.tasks.python import vision
 from mediapipe.tasks import python
 from mediapipe.tasks.python.core.base_options import BaseOptions
@@ -12,8 +11,7 @@ from mediapipe.tasks.python.vision import HandLandmarker
 HANDS_MODEL_PATH = 'landmarks/hand_landmarker.task'
 video = cv2.VideoCapture(0)
 screen_w, screen_h = pg.size()
-mouse = Controller()
-print(screen_w, screen_h)
+
 
 
 pg.PAUSE = 0
@@ -108,9 +106,9 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         dist = distance(thumb_normalized, index_normalized)
 
                         is_touching = dist < CLICK_THRESHOLD
-
+                        print(dist)
                         if is_touching and not was_touching:
-                            print(mouse.position)
+                            pg.click(x=round(prev_mouse_x), y=round(prev_mouse_y))
 
                         was_touching = is_touching
 
