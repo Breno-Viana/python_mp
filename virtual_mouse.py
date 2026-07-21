@@ -49,7 +49,7 @@ def normalize(point, width, height):
 was_touching = False
 prev_mouse_x, prev_mouse_y = screen_w, screen_h
 SMOOTHING = 0.5
-CLICK_THRESHOLD = 30
+CLICK_THRESHOLD = 35
 
 with HandLandmarker.create_from_options(options=options) as hands_landmark:
     while video.isOpened():
