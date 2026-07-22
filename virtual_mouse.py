@@ -21,23 +21,20 @@ options = vision.HandLandmarkerOptions(
     num_hands=2,
     running_mode=vision.RunningMode.VIDEO,
 )
-start = time.time()
 
-CONNECTIONS = [
-    (0, 1), (1, 2), (2, 3), (3, 4),
-    (0, 5), (5, 6), (6, 7), (7, 8),
-    (5, 9), (9, 10), (10, 11), (11, 12),
-    (9, 13), (13, 14), (14, 15), (15, 16),
-    (13, 17), (0, 17), (17, 18), (18, 19), (19, 20),
-]
 
-SENSITIVITY_MARGIN = 0.15
-MIN_RANGE = SENSITIVITY_MARGIN
-MAX_RANGE = 1 - SENSITIVITY_MARGIN
-was_touching_tips = [False, False]
-prev_mouse_x, prev_mouse_y = screen_w // 2, screen_h // 2
+CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4),(0, 5), (5, 6), (6, 7), (7, 8),(5, 9), (9, 10), (10, 11), (11, 12),(9, 13), (13, 14), (14, 15), (15, 16),(13, 17), (0, 17), (17, 18), (18, 19), (19, 20),]
+SENSITIVITY_MARGIN = 0.3
 SMOOTHING = 0.5
 CLICK_THRESHOLD = 35
+MIN_RANGE = SENSITIVITY_MARGIN
+MAX_RANGE = 1 - SENSITIVITY_MARGIN
+
+start = time.time()
+closed = 0
+was_touching_tips = [False, False]
+prev_mouse_x, prev_mouse_y = screen_w // 2, screen_h // 2
+
 
 def distance(p1, p2):
     x1, y1 = p1
@@ -80,13 +77,16 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
 
                 for start_idx, end_idx in CONNECTIONS:
                     cv2.line(frame, points[start_idx], points[end_idx], (0, 255, 0), 2)
-                for point in points:
+                for ix,point in enumerate(points):
+                    cv2.putText(frame,str(ix), point, cv2.FONT_HERSHEY_PLAIN, 1, (240, 0, 40), 1)
                     cv2.circle(frame, point, 4, (0, 255, 0), -1)
 
                 if result.handedness:
                     hand = result.handedness[idx]
                     hand_label = hand[0].display_name
                     # print(hand_label)
+
+
 
                     if hand_label == 'Left':
                         index_tip = hand_landmarks[8]
@@ -98,6 +98,9 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         smooth_y = prev_mouse_y + (target_y - prev_mouse_y) * SMOOTHING
                         pg.moveTo(x=round(smooth_x), y=round(smooth_y))
                         prev_mouse_x, prev_mouse_y = smooth_x, smooth_y
+
+
+
 
                     if hand_label == 'Right':
                         thumb_tip = hand_landmarks[4]
@@ -122,12 +125,13 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         middle_normalized = normalize(middle_point, screen_w, screen_h)
 
                         dist_thumb_middle = distance(thumb_normalized, middle_normalized)
-                        print(dist_thumb_middle)
+                        # print(dist_thumb_middle)
                         is_touching_middle = dist_thumb_middle < CLICK_THRESHOLD
 
                         if is_touching_middle and not was_touching_tips[1]:
                             pg.rightClick(x=round(prev_mouse_x), y=round(prev_mouse_y))
                         was_touching_tips[1] = is_touching_middle
+
 
         cv2.imshow(label, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
