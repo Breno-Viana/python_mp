@@ -12,8 +12,6 @@ HANDS_MODEL_PATH = 'landmarks/hand_landmarker.task'
 video = cv2.VideoCapture(0)
 screen_w, screen_h = pg.size()
 
-
-
 pg.PAUSE = 0
 
 baseOptions = BaseOptions(model_asset_path=HANDS_MODEL_PATH, delegate=python.BaseOptions.Delegate.CPU)
@@ -33,6 +31,13 @@ CONNECTIONS = [
     (13, 17), (0, 17), (17, 18), (18, 19), (19, 20),
 ]
 
+SENSITIVITY_MARGIN = 0.15
+MIN_RANGE = SENSITIVITY_MARGIN
+MAX_RANGE = 1 - SENSITIVITY_MARGIN
+was_touching_tips = [False, False]
+prev_mouse_x, prev_mouse_y = screen_w // 2, screen_h // 2
+SMOOTHING = 0.5
+CLICK_THRESHOLD = 35
 
 def distance(p1, p2):
     x1, y1 = p1
@@ -44,16 +49,13 @@ def normalize(point, width, height):
     x, y = point
     return round(x * width), round(y * height)
 
+
 def remap(value, in_min, in_max, out_min, out_max):
     value = max(in_min, min(in_max, value))
     return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
 
-was_touching = False
-prev_mouse_x, prev_mouse_y = screen_w//2, screen_h//2
-SMOOTHING = 0.5
-CLICK_THRESHOLD = 35
 
 with HandLandmarker.create_from_options(options=options) as hands_landmark:
     while video.isOpened():
@@ -84,11 +86,7 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                 if result.handedness:
                     hand = result.handedness[idx]
                     hand_label = hand[0].display_name
-
-                    SENSITIVITY_MARGIN = 0.15
-
-                    MIN_RANGE = SENSITIVITY_MARGIN
-                    MAX_RANGE = 1 - SENSITIVITY_MARGIN
+                    # print(hand_label)
 
                     if hand_label == 'Left':
                         index_tip = hand_landmarks[8]
@@ -111,14 +109,25 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         thumb_normalized = normalize(thumb_point, screen_w, screen_h)
                         index_normalized = normalize(index_point, screen_w, screen_h)
 
-                        dist = distance(thumb_normalized, index_normalized)
+                        dist_thumb_index = distance(thumb_normalized, index_normalized)
 
-                        is_touching = dist < CLICK_THRESHOLD
-                        print(dist)
-                        if is_touching and not was_touching:
+                        is_touching_index = dist_thumb_index < CLICK_THRESHOLD
+
+                        if is_touching_index and not was_touching_tips[0]:
                             pg.click(x=round(prev_mouse_x), y=round(prev_mouse_y))
+                        was_touching_tips[0] = is_touching_index
 
-                        was_touching = is_touching
+                        middle_tip = hand_landmarks[12]
+                        middle_point = middle_tip.x, middle_tip.y
+                        middle_normalized = normalize(middle_point, screen_w, screen_h)
+
+                        dist_thumb_middle = distance(thumb_normalized, middle_normalized)
+                        print(dist_thumb_middle)
+                        is_touching_middle = dist_thumb_middle < CLICK_THRESHOLD
+
+                        if is_touching_middle and not was_touching_tips[1]:
+                            pg.rightClick(x=round(prev_mouse_x), y=round(prev_mouse_y))
+                        was_touching_tips[1] = is_touching_middle
 
         cv2.imshow(label, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
