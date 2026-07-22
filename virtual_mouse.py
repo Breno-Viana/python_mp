@@ -118,7 +118,7 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         dist_index = distance(thumb_normalized, index_normalized)
 
                         is_touching_index = dist_index < CLICK_THRESHOLD
-                        # print(dist)
+
                         if is_touching_index and not was_touching_tip[0]:
                             pg.click(x=round(prev_mouse_x), y=round(prev_mouse_y))
                         was_touching_tip[0] = is_touching_index
