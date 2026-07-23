@@ -23,11 +23,17 @@ options = vision.HandLandmarkerOptions(
     running_mode=vision.RunningMode.VIDEO,
 )
 
-CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8), (5, 9), (9, 10), (10, 11), (11, 12),
-               (9, 13), (13, 14), (14, 15), (15, 16), (13, 17), (0, 17), (17, 18), (18, 19), (19, 20), ]
+CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4),
+               (0, 5), (5, 6), (6, 7), (7, 8),
+               (5, 9),
+               (9, 10), (10, 11), (11, 12),
+               (9, 13),
+               (13, 14), (14, 15), (15, 16),
+               (13, 17),
+               (0, 17), (17, 18), (18, 19), (19, 20), ]
 SENSITIVITY_MARGIN = 0.3
 SMOOTHING = 0.5
-CLICK_THRESHOLD = 20
+CLICK_THRESHOLD = 30
 MIN_RANGE = SENSITIVITY_MARGIN
 MAX_RANGE = 1 - SENSITIVITY_MARGIN
 TIPS_LANDMARKS = [8, 12, 16, 20]
@@ -37,6 +43,7 @@ start = time.time()
 hands_closed = 0
 was_touching_tips = [False, False]
 hand_was_closed = [False, False]
+is_dragging = False
 prev_mouse_x, prev_mouse_y = screen_w // 2, screen_h // 2
 
 
@@ -111,6 +118,7 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                     """
                     if hand_label == 'Left':
                         index_tip = hand_landmarks[TIPS_LANDMARKS[0]]
+                        thumb_tip = hand_landmarks[4]
 
                         target_x = remap(index_tip.x, MIN_RANGE, MAX_RANGE, 0, screen_w)
                         target_y = remap(index_tip.y, MIN_RANGE, MAX_RANGE, 0, screen_h)
@@ -133,9 +141,25 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
 
                         mcp_points_normalized = normalize_all([index_mcp, middle_mcp, ring_mcp, pinky_mcp])
 
+                        thumb_normalized = normalize((thumb_tip.x, thumb_tip.y), w, h)
+                        middle_normalized = normalize((middle_tip.x, middle_tip.y), w, h)
+
+                        dist_thumb_middle = distance(thumb_normalized, middle_normalized)
+
+                        is_touching_middle = dist_thumb_middle < CLICK_THRESHOLD
+
+                        if is_touching_middle and not is_dragging:
+                            pg.mouseDown(prev_mouse_x, prev_mouse_y)
+                        if not is_touching_middle and is_dragging:
+                            pg.mouseUp(prev_mouse_x, prev_mouse_y)
+                        is_dragging = is_touching_middle
+
                         is_higher = is_tip_higher_than_mcp(tips_points_normalized, mcp_points_normalized)
 
                         right_is_closed = all(is_higher)
+
+
+
 
 
                         was_closed_before = hand_was_closed[idx]
@@ -205,9 +229,10 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         hand_was_closed[idx] = left_is_closed
 
 
-        # cv2.imshow(label, frame)
-        if hands_closed == 2:
 
+        # cv2.imshow(label, frame)
+        # cv2.waitKey(1)
+        if hands_closed == 2:
             break
 
 video.release()
