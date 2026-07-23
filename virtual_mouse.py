@@ -31,8 +31,8 @@ CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4),
                (13, 14), (14, 15), (15, 16),
                (13, 17),
                (0, 17), (17, 18), (18, 19), (19, 20), ]
-SENSITIVITY_MARGIN = 0.3
-SMOOTHING = 0.5
+SENSITIVITY_MARGIN = 0.35
+SMOOTHING = 0.3
 CLICK_THRESHOLD = 30
 MIN_RANGE = SENSITIVITY_MARGIN
 MAX_RANGE = 1 - SENSITIVITY_MARGIN
@@ -230,8 +230,8 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
 
 
 
-        # cv2.imshow(label, frame)
-        # cv2.waitKey(1)
+        cv2.imshow(label, frame)
+        cv2.waitKey(1)
         if hands_closed == 2:
             break
 
