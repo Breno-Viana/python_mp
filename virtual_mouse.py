@@ -1,5 +1,6 @@
 import math
 import time
+
 import mediapipe as mp
 import pyautogui as pg
 import cv2
@@ -22,17 +23,20 @@ options = vision.HandLandmarkerOptions(
     running_mode=vision.RunningMode.VIDEO,
 )
 
-
-CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4),(0, 5), (5, 6), (6, 7), (7, 8),(5, 9), (9, 10), (10, 11), (11, 12),(9, 13), (13, 14), (14, 15), (15, 16),(13, 17), (0, 17), (17, 18), (18, 19), (19, 20),]
+CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8), (5, 9), (9, 10), (10, 11), (11, 12),
+               (9, 13), (13, 14), (14, 15), (15, 16), (13, 17), (0, 17), (17, 18), (18, 19), (19, 20), ]
 SENSITIVITY_MARGIN = 0.3
 SMOOTHING = 0.5
-CLICK_THRESHOLD = 35
+CLICK_THRESHOLD = 20
 MIN_RANGE = SENSITIVITY_MARGIN
 MAX_RANGE = 1 - SENSITIVITY_MARGIN
+TIPS_LANDMARKS = [8, 12, 16, 20]
+MCP_LANDMARKS = [5, 9, 13, 17]
 
 start = time.time()
-closed = 0
+hands_closed = 0
 was_touching_tips = [False, False]
+hand_was_closed = [False, False]
 prev_mouse_x, prev_mouse_y = screen_w // 2, screen_h // 2
 
 
@@ -42,16 +46,32 @@ def distance(p1, p2):
     return math.hypot(x2 - x1, y2 - y1)
 
 
-def normalize(point, width, height):
-    x, y = point
+def normalize(point_lm, width, height):
+    x, y = point_lm
     return round(x * width), round(y * height)
+
+
+def higher(point_1: int, point_2: int):
+    return point_1 > point_2
+
+
+def is_tip_higher_than_mcp(points_tip: list[tuple[int, int]], points_mcp: list[tuple[int, int]]):
+    return [
+        higher(tip[1], mcp[1])
+        for tip, mcp in zip(points_tip, points_mcp)
+    ]
+
+
+def normalize_all(landmarks: list):
+    return [
+        normalize((lmk.x, lmk.y), screen_w, screen_h)
+        for lmk in landmarks
+    ]
 
 
 def remap(value, in_min, in_max, out_min, out_max):
     value = max(in_min, min(in_max, value))
     return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
-
-
 
 
 with HandLandmarker.create_from_options(options=options) as hands_landmark:
@@ -77,19 +97,20 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
 
                 for start_idx, end_idx in CONNECTIONS:
                     cv2.line(frame, points[start_idx], points[end_idx], (0, 255, 0), 2)
-                for ix,point in enumerate(points):
-                    cv2.putText(frame,str(ix), point, cv2.FONT_HERSHEY_PLAIN, 1, (240, 0, 40), 1)
+                for ix, point in enumerate(points):
+                    cv2.putText(frame, str(ix), point, cv2.FONT_HERSHEY_PLAIN, 1, (240, 0, 40), 1)
                     cv2.circle(frame, point, 4, (0, 255, 0), -1)
 
                 if result.handedness:
                     hand = result.handedness[idx]
                     hand_label = hand[0].display_name
-                    # print(hand_label)
 
-
-
+                    """
+                    The hand_label indicates that this is the left hand, but it is actually the right;
+                    for the section marked 'Left', please bear in mind that we are dealing with the right hand.
+                    """
                     if hand_label == 'Left':
-                        index_tip = hand_landmarks[8]
+                        index_tip = hand_landmarks[TIPS_LANDMARKS[0]]
 
                         target_x = remap(index_tip.x, MIN_RANGE, MAX_RANGE, 0, screen_w)
                         target_y = remap(index_tip.y, MIN_RANGE, MAX_RANGE, 0, screen_h)
@@ -99,18 +120,45 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         pg.moveTo(x=round(smooth_x), y=round(smooth_y))
                         prev_mouse_x, prev_mouse_y = smooth_x, smooth_y
 
+                        middle_tip = hand_landmarks[TIPS_LANDMARKS[1]]
+                        ring_tip = hand_landmarks[TIPS_LANDMARKS[2]]
+                        pinky_tip = hand_landmarks[TIPS_LANDMARKS[3]]
+
+                        tips_points_normalized = normalize_all([index_tip, middle_tip, ring_tip, pinky_tip])
+
+                        index_mcp = hand_landmarks[MCP_LANDMARKS[0]]
+                        middle_mcp = hand_landmarks[MCP_LANDMARKS[1]]
+                        ring_mcp = hand_landmarks[MCP_LANDMARKS[2]]
+                        pinky_mcp = hand_landmarks[MCP_LANDMARKS[3]]
+
+                        mcp_points_normalized = normalize_all([index_mcp, middle_mcp, ring_mcp, pinky_mcp])
+
+                        is_higher = is_tip_higher_than_mcp(tips_points_normalized, mcp_points_normalized)
+
+                        right_is_closed = all(is_higher)
 
 
+                        was_closed_before = hand_was_closed[idx]
+                        if right_is_closed and not was_closed_before:
+                            hands_closed += 1
+                        if not right_is_closed and was_closed_before:
+                            hands_closed -= 1
+                        hand_was_closed[idx] = right_is_closed
 
+
+                    """
+                    The hand_label indicates that this is the right hand, but it is actually the left;
+                    for the section marked 'Right', please bear in mind that we are dealing with the left hand.
+                    """
                     if hand_label == 'Right':
                         thumb_tip = hand_landmarks[4]
-                        index_finger_tip = hand_landmarks[8]
+                        index_tip = hand_landmarks[TIPS_LANDMARKS[0]]
 
                         thumb_point = thumb_tip.x, thumb_tip.y
-                        index_point = index_finger_tip.x, index_finger_tip.y
+                        index_point = index_tip.x, index_tip.y
 
-                        thumb_normalized = normalize(thumb_point, screen_w, screen_h)
-                        index_normalized = normalize(index_point, screen_w, screen_h)
+                        thumb_normalized = normalize(thumb_point, w, h)
+                        index_normalized = normalize(index_point, w, h)
 
                         dist_thumb_index = distance(thumb_normalized, index_normalized)
 
@@ -122,7 +170,7 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
 
                         middle_tip = hand_landmarks[12]
                         middle_point = middle_tip.x, middle_tip.y
-                        middle_normalized = normalize(middle_point, screen_w, screen_h)
+                        middle_normalized = normalize(middle_point, w, h)
 
                         dist_thumb_middle = distance(thumb_normalized, middle_normalized)
                         # print(dist_thumb_middle)
@@ -132,9 +180,34 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                             pg.rightClick(x=round(prev_mouse_x), y=round(prev_mouse_y))
                         was_touching_tips[1] = is_touching_middle
 
+                        middle_tip = hand_landmarks[TIPS_LANDMARKS[1]]
+                        ring_tip = hand_landmarks[TIPS_LANDMARKS[2]]
+                        pinky_tip = hand_landmarks[TIPS_LANDMARKS[3]]
 
-        cv2.imshow(label, frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+                        tips_points_normalized = normalize_all([index_tip, middle_tip, ring_tip, pinky_tip])
+
+                        index_mcp = hand_landmarks[MCP_LANDMARKS[0]]
+                        middle_mcp = hand_landmarks[MCP_LANDMARKS[1]]
+                        ring_mcp = hand_landmarks[MCP_LANDMARKS[2]]
+                        pinky_mcp = hand_landmarks[MCP_LANDMARKS[3]]
+
+                        mcp_points_normalized = normalize_all([index_mcp, middle_mcp, ring_mcp, pinky_mcp])
+
+                        is_higher = is_tip_higher_than_mcp(tips_points_normalized, mcp_points_normalized)
+
+                        left_is_closed = all(is_higher)
+
+                        was_closed_before = hand_was_closed[idx]
+                        if left_is_closed and not was_closed_before:
+                            hands_closed += 1
+                        if not left_is_closed and was_closed_before:
+                            hands_closed -= 1
+                        hand_was_closed[idx] = left_is_closed
+
+
+        # cv2.imshow(label, frame)
+        if hands_closed == 2:
+
             break
 
 video.release()
