@@ -13,7 +13,7 @@ Cada mão tem um papel fixo:
 
 ## Gestos
 
-### Mão direita
+### Mão esquerda
 
 | Gesto | Ação |
 |---|---|
@@ -22,7 +22,7 @@ Cada mão tem um papel fixo:
 | Fechar anelar + mindinho | Scroll para cima, enquanto o gesto for mantido |
 | Fechar a mão inteira (punho) | Contabiliza para o gesto de encerrar o programa |
 
-### Mão esquerda
+### Mão direita
 
 | Gesto | Ação |
 |---|---|
@@ -51,13 +51,7 @@ source venv/bin/activate
 pip install mediapipe opencv-python pyautogui
 ```
 
-Baixe o modelo de detecção de mãos do MediaPipe e coloque na pasta `landmarks/` do projeto:
-
-```bash
-mkdir -p landmarks
-wget -O landmarks/hand_landmarker.task \
-  https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
-```
+O modelo de detecção de mãos (`hand_landmarker.task`) já vem incluído no projeto, na pasta `landmarks/` — não é necessário baixar nada manualmente.
 
 ## Executando
 
