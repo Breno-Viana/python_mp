@@ -13,7 +13,7 @@ Cada mão tem um papel fixo:
 
 ## Gestos
 
-### Mão esquerda
+### Mão direita
 
 | Gesto | Ação |
 |---|---|
@@ -22,7 +22,7 @@ Cada mão tem um papel fixo:
 | Fechar anelar + mindinho | Scroll para cima, enquanto o gesto for mantido |
 | Fechar a mão inteira (punho) | Contabiliza para o gesto de encerrar o programa |
 
-### Mão direita
+### Mão esquerda
 
 | Gesto | Ação |
 |---|---|
