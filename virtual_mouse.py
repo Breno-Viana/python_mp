@@ -84,7 +84,7 @@ def is_tip_higher_than_mcp(points_tip: list[tuple[int, int]], points_mcp: list[t
     For each (fingertip, base-knuckle) pair, checks whether the fingertip's Y coordinate
     is greater than the knuckle's Y coordinate.
     Since Y grows downward in image coordinates, tip_y > mcp_y means the tip is BELOW
-    the knuckle, i.e. the finger is curled/folded rather than extended.
+    the knuckle, i.e., the finger is curled/folded rather than extended.
     Returns a list of booleans, one per finger, in the same order as the input lists.
     """
     return [
@@ -122,7 +122,7 @@ def remap(value, in_min, in_max, out_max):
 def scroll(hand: str | None):
     """
     Performs a single scroll tick in a fixed direction depending on which hand triggered it.
-    'left' scrolls down (-1), 'right' scrolls up (+1). Does nothing if the hand is None.
+    'Left' scrolls down (-1), 'right' scrolls up (+1). Does nothing if the hand is None.
     NOTE: this scrolls a fixed amount per call, not proportional to any gesture intensity --
     the calling code is expected to only call this once per frame while the gesture is held,
     which (at ~30fps) produces a continuous, fixed-speed scroll for as long as the gesture is active.
@@ -191,8 +191,8 @@ with HandLandmarker.create_from_options(options=hands_options) as hands_landmark
                         thumb_tip = hand_landmarks[4]
 
                         # --- Cursor movement: map index fingertip position (active zone) to full screen ---
-                        target_x = remap(index_tip.x, MIN_RANGE, MAX_RANGE, 0, screen_w)
-                        target_y = remap(index_tip.y, MIN_RANGE, MAX_RANGE, 0, screen_h)
+                        target_x = remap(index_tip.x, MIN_RANGE, MAX_RANGE, screen_w)
+                        target_y = remap(index_tip.y, MIN_RANGE, MAX_RANGE, screen_h)
 
                         # Smooth the cursor movement (linear interpolation) to reduce frame-to-frame jitter
                         smooth_x = prev_mouse_x + (target_x - prev_mouse_x) * SMOOTHING
