@@ -15,9 +15,9 @@ screen_w, screen_h = pg.size()
 
 pg.PAUSE = 0
 
-baseOptions = BaseOptions(model_asset_path=HANDS_MODEL_PATH, delegate=python.BaseOptions.Delegate.CPU)
-options = vision.HandLandmarkerOptions(
-    base_options=baseOptions,
+hands_base_options = BaseOptions(model_asset_path=HANDS_MODEL_PATH, delegate=python.BaseOptions.Delegate.CPU)
+hands_options = vision.HandLandmarkerOptions(
+    base_options=hands_base_options,
     min_hand_detection_confidence=0.5,
     num_hands=2,
     running_mode=vision.RunningMode.VIDEO,
@@ -32,7 +32,7 @@ CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4),
                (13, 17),
                (0, 17), (17, 18), (18, 19), (19, 20), ]
 SENSITIVITY_MARGIN = 0.35
-SMOOTHING = 0.3
+SMOOTHING = 0.25
 CLICK_THRESHOLD = 30
 MIN_RANGE = SENSITIVITY_MARGIN
 MAX_RANGE = 1 - SENSITIVITY_MARGIN
@@ -40,6 +40,7 @@ TIPS_LANDMARKS = [8, 12, 16, 20]
 MCP_LANDMARKS = [5, 9, 13, 17]
 
 start = time.time()
+
 hands_closed = 0
 was_touching_tips = [False, False]
 hand_was_closed = [False, False]
@@ -78,10 +79,17 @@ def normalize_all(landmarks: list):
 
 def remap(value, in_min, in_max, out_min, out_max):
     value = max(in_min, min(in_max, value))
-    return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
+    return (value - in_min) / (in_max - in_min) * out_max
 
+def scroll(hand:str|None):
+    if hand is None:
+        return
+    if hand == 'left':
+        pg.scroll(-1)
+    if hand == 'right':
+        pg.scroll(1)
 
-with HandLandmarker.create_from_options(options=options) as hands_landmark:
+with HandLandmarker.create_from_options(options=hands_options) as hands_landmark:
     while video.isOpened():
         ok, frame = video.read()
         if not ok:
@@ -159,15 +167,17 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                         right_is_closed = all(is_higher)
 
 
-
-
-
                         was_closed_before = hand_was_closed[idx]
                         if right_is_closed and not was_closed_before:
                             hands_closed += 1
                         if not right_is_closed and was_closed_before:
                             hands_closed -= 1
                         hand_was_closed[idx] = right_is_closed
+
+
+
+                        if all(is_higher[2:]):
+                            scroll('right')
 
 
                     """
@@ -228,10 +238,13 @@ with HandLandmarker.create_from_options(options=options) as hands_landmark:
                             hands_closed -= 1
                         hand_was_closed[idx] = left_is_closed
 
+                        if all(is_higher[2:]):
+                            scroll('left')
 
 
-        cv2.imshow(label, frame)
-        cv2.waitKey(1)
+
+        # cv2.imshow(label, frame)
+        # cv2.waitKey(1)
         if hands_closed == 2:
             break
 
