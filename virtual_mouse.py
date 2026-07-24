@@ -17,7 +17,7 @@ screen_w, screen_h = pg.size()  # actual monitor resolution, used to map hand po
 pg.PAUSE = 0  # removes pyautogui's default 0.1s delay after each action, so mouse control feels responsive
 
 # --- MediaPipe HandLandmarker configuration ---
-hands_base_options = BaseOptions(model_asset_path=HANDS_MODEL_PATH, delegate=python.BaseOptions.Delegate.CPU)
+hands_base_options = BaseOptions(model_asset_path=HANDS_MODEL_PATH, delegate=python.BaseOptions.Delegate.GPU)
 hands_options = vision.HandLandmarkerOptions(
     base_options=hands_base_options,
     min_hand_detection_confidence=0.5,
@@ -37,7 +37,7 @@ CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4),
                (0, 17), (17, 18), (18, 19), (19, 20), ]
 
 # --- Tunable constants ---
-SENSITIVITY_MARGIN = 0.35  # fraction of the webcam frame's edges to ignore when mapping hand -> screen position
+SENSITIVITY_MARGIN = 0.35 # fraction of the webcam frame's edges to ignore when mapping hand -> screen position
 SMOOTHING = 0.25           # cursor smoothing factor (0-1): lower = smoother/laggier, higher = more responsive/jittery
 CLICK_THRESHOLD = 30       # max pixel distance (webcam space) between fingertips to count as a "pinch"/click
 MIN_RANGE = SENSITIVITY_MARGIN       # lower bound of the "active zone" (0-1 scale) used by remap() for cursor control
@@ -105,7 +105,7 @@ def normalize_all(landmarks: list):
     ]
 
 
-def remap(value, in_min, in_max, out_min, out_max):
+def remap(value, in_min, in_max, out_max):
     """
     Maps `value` from the input range [in_min, in_max] to an output scale of out_max.
     The value is clamped to [in_min, in_max] first, so a fingertip that strays outside
@@ -122,7 +122,7 @@ def remap(value, in_min, in_max, out_min, out_max):
 def scroll(hand: str | None):
     """
     Performs a single scroll tick in a fixed direction depending on which hand triggered it.
-    'left' scrolls down (-1), 'right' scrolls up (+1). Does nothing if hand is None.
+    'left' scrolls down (-1), 'right' scrolls up (+1). Does nothing if the hand is None.
     NOTE: this scrolls a fixed amount per call, not proportional to any gesture intensity --
     the calling code is expected to only call this once per frame while the gesture is held,
     which (at ~30fps) produces a continuous, fixed-speed scroll for as long as the gesture is active.
@@ -278,7 +278,7 @@ with HandLandmarker.create_from_options(options=hands_options) as hands_landmark
                             pg.click(x=round(prev_mouse_x), y=round(prev_mouse_y))
                         was_touching_tips[0] = is_touching_index
 
-                        # --- Right click: thumb + middle finger pinch ---
+                        # --- Right-click: thumb + middle finger pinch ---
                         middle_tip = hand_landmarks[12]
                         middle_point = middle_tip.x, middle_tip.y
                         middle_normalized = normalize(middle_point, w, h)
